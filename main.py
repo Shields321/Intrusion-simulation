@@ -27,6 +27,7 @@ vm_victim = "ubuntuDesktop"
 victim_user = "Shields"
 victim_pass = "1234"
 
+
 attacker_ip_command = "VBoxManage guestproperty get {} /VirtualBox/GuestInfo/Net/0/V4/IP".format(vm_attacker)
 victim_ip_command = "VBoxManage guestproperty get {} /VirtualBox/GuestInfo/Net/0/V4/IP".format(vm_victim)
 
@@ -69,14 +70,46 @@ def power_off_vms():
     subprocess.run(["VBoxManage", "controlvm", vm_attacker, "poweroff"])
     subprocess.run(["VBoxManage", "controlvm", vm_victim, "poweroff"])
     log_message("VMs powered off.")
-    
+
+def start_ssh_service(vm_name, username, password):
+    """Start the SSH service on the specified VM."""
+    try:
+        log_message(f"Starting SSH service on {vm_name}...")
+        # Command to start SSH service (adjust based on the VM's OS)
+        if "kali" in vm_name.lower():
+            ssh_start_command = "sudo systemctl start ssh"
+        elif "ubuntu" in vm_name.lower():
+            ssh_start_command = "sudo service ssh start"
+        else:
+            log_message(f"Unsupported VM OS for {vm_name}. SSH service not started.")
+            return
+
+        # Execute the command inside the VM
+        subprocess.run([
+            "VBoxManage", "guestcontrol", vm_name, "run",
+            "--username", username,
+            "--password", password,
+            "--", "/bin/bash", "-c", f"echo {password} | sudo -S systemctl start ssh"
+        ], check=True)
+        log_message(f"SSH service started on {vm_name}.")
+    except subprocess.CalledProcessError as e:
+        log_message(f"Error starting SSH service on {vm_name}: {e}")
+        
 # Start VMs
 def start_vms():
-    log_message("Starting VMs...")
-    subprocess.run(["VBoxManage", "startvm", vm_attacker, "--type", "headless"])
-    subprocess.run(["VBoxManage", "startvm", vm_victim, "--type", "headless"])
-    log_message("VMs started. Waiting for boot...")
-    time.sleep(30)  # Adjust for boot time
+    try:
+        log_message("Starting VMs...")
+        subprocess.run(["VBoxManage", "startvm", vm_attacker, "--type", "headless"])
+        subprocess.run(["VBoxManage", "startvm", vm_victim, "--type", "headless"])
+        log_message("VMs started. Waiting for boot...")
+        time.sleep(120)  # Adjust for boot time
+    except Exception as e:
+        pass    
+
+    # Start SSH service on both VMs
+    start_ssh_service(vm_attacker, attacker_user, attacker_pass)
+    #start_ssh_service(vm_victim, victim_user, victim_pass)
+
     log_message("VMs are ready.")
 
 # Start DDoS Attack
@@ -91,7 +124,7 @@ def start_attack():
         attack_command = f"sudo hping3 -S --flood -p 80 {victim_ip}"
         log_message("Launching attack...")
         
-        ssh.exec_command(attack_command)
+        #ssh.exec_command(attack_command)
         log_message(f"Attacking {victim_ip} from {attacker_ip}...")
         ssh.close()
     except Exception as e:
