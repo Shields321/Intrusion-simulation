@@ -48,7 +48,7 @@ def sortIPaddress(copy):
 def block_ip(block_ip):
     try:
         ipAddress_blocked.append(block_ip)
-        subprocess.run(["sudo","ufw","deny",block_ip], check = True)
+        subprocess.run(["sudo","ufw","deny", "from", block_ip], check = True)
         print(f'IP address {block_ip} is blocked')
     except:
         pass
@@ -61,16 +61,16 @@ def ipAddress_Source_Frequncy_ddos(copy):
                 if "IP" in individual_ip:
                     if individual_ip.ip.src == fiveSec_check:
                         five_frequncy += 1
-            if five_frequncy > threshold_5:
+            if five_frequncy > threshold_5 and individual_ip.ip.src not in ipAddress_blocked:
                 print(f'{individual_ip.ip.src} over threshold in the last 5 seconds')
-                #block_ip(individual_ip.ip.src)
+                block_ip(individual_ip.ip.src)
                     
         for sourceIP in ipAddressSRC_unique:
             srcFrequncy = 0
             for sourceIP1 in ipAddressSRC:
                 if sourceIP1 == sourceIP:
                     srcFrequncy+=1
-            if srcFrequncy >= threshold:
+            if srcFrequncy >= threshold and individual_ip.ip.src not in ipAddress_blocked:
                 print(f'high packet activity since IDPS launch Source IP: {sourceIP}, Frequncy: {srcFrequncy}')
                 
     except:
@@ -91,7 +91,7 @@ def malicous_payload_detection(copy):
                     for check in signatures:
                         if check in payload_str:
                             print(f'{malicious_ip} has a command of {payload_str}')
-                            #block_ip(malicious_ip)
+                            block_ip(malicious_ip)
                             break                
     except:
         pass
@@ -106,7 +106,7 @@ def spoof_packet(copy):
                 
                 if ttl_packet < 30 or ttl_packet > 80:
                     print(f'{spoof_ip} has a ttl of {ttl_packet}')
-                    #block_ip(spoof_ip)
+                    block_ip(spoof_ip)
                 
     except:
         pass
@@ -140,8 +140,8 @@ while(True):
         sortIPaddress(copy)
         five_sec_pac = five_sec_interval(copy)
         ipAddress_Source_Frequncy_ddos(five_sec_pac)
-        #malicous_payload_detection(copy)
-        #spoof_packet(copy)
+        malicous_payload_detection(copy)
+        spoof_packet(copy)
     except:
         pass
 
