@@ -12,8 +12,9 @@ ipAddressSRC_unique = []
 ipAddressDist = []
 ipAddressDist_unique = []
 ipAddress_blocked = []
-threshold = 3000
-threshold_5 = 2000
+threshold = 10
+threshold_5 = 5
+threshold_high = 1000
 
 signatures = [
     "ifconfig",
@@ -48,7 +49,7 @@ def sortIPaddress(copy):
 def block_ip(block_ip):
     try:
         ipAddress_blocked.append(block_ip)
-        subprocess.run(["sudo","ufw","deny", "from", block_ip], check = True)
+        #subprocess.run(["sudo","ufw","deny", "from", block_ip], check = True)
         print(f'IP address {block_ip} is blocked')
     except:
         pass
@@ -57,21 +58,29 @@ def ipAddress_Source_Frequncy_ddos(copy):
     try:
         for fiveSec_check in ipAddressSRC_unique:
             five_frequncy = 0
+            TCP_count = 0
             for individual_ip in copy:
                 if "IP" in individual_ip:
                     if individual_ip.ip.src == fiveSec_check:
                         five_frequncy += 1
-            if five_frequncy > threshold_5 and individual_ip.ip.src not in ipAddress_blocked:
+                    if "IP" in individual_ip:
+                        TCP_count +=1
+            if (five_frequncy > threshold_5) and (fiveSec_check not in ipAddress_blocked):
                 print(f'{individual_ip.ip.src} over threshold in the last 5 seconds')
                 block_ip(individual_ip.ip.src)
+            elif TCP_count > threshold_high:
+                print(f'Frequncy of packets too high within 5 seconds')
+                for massBlock in copy:
+                    block_ip(massBlock.ip.src)
                     
         for sourceIP in ipAddressSRC_unique:
             srcFrequncy = 0
             for sourceIP1 in ipAddressSRC:
                 if sourceIP1 == sourceIP:
                     srcFrequncy+=1
-            if srcFrequncy >= threshold and individual_ip.ip.src not in ipAddress_blocked:
-                print(f'high packet activity since IDPS launch Source IP: {sourceIP}, Frequncy: {srcFrequncy}')
+            if (srcFrequncy >= threshold): 
+                if (sourceIP not in ipAddress_blocked):
+                    print(f'high packet activity since IDPS launch Source IP: {sourceIP}, Frequncy: {srcFrequncy}')
                 
     except:
         pass
@@ -83,13 +92,13 @@ def malicous_payload_detection(copy):
                 malicious_ip = command_detect.ip.src
                 
                 if hasattr(command_detect.tcp, 'payload'):
-                    print(f'{malicious_ip} has a payload')
+                    #print(f'{malicious_ip} has a payload')
                     payload_hex = command_detect.tcp.payload.replace(':', '')
                     payload_bytes = bytes.fromhex(payload_hex)
                     payload_str = payload_bytes.decode('utf-8', errors='ignore')
                     
                     for check in signatures:
-                        if check in payload_str:
+                        if check in payload_str and malicious_ip not in ipAddress_blocked:
                             print(f'{malicious_ip} has a command of {payload_str}')
                             block_ip(malicious_ip)
                             break                
@@ -104,7 +113,7 @@ def spoof_packet(copy):
                 
                 ttl_packet = int(spoof.ip.ttl)
                 
-                if ttl_packet < 30 or ttl_packet > 80:
+                if (ttl_packet < 30 or ttl_packet > 80) and spoof_ip not in ipAddress_blocked:
                     print(f'{spoof_ip} has a ttl of {ttl_packet}')
                     block_ip(spoof_ip)
                 
@@ -140,8 +149,8 @@ while(True):
         sortIPaddress(copy)
         five_sec_pac = five_sec_interval(copy)
         ipAddress_Source_Frequncy_ddos(five_sec_pac)
-        malicous_payload_detection(copy)
-        spoof_packet(copy)
+        #malicous_payload_detection(copy)
+        #spoof_packet(copy)
     except:
         pass
 
