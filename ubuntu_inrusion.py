@@ -12,9 +12,9 @@ ipAddressSRC_unique = []
 ipAddressDist = []
 ipAddressDist_unique = []
 ipAddress_blocked = []
-threshold = 10
-threshold_5 = 5
-threshold_high = 1000
+threshold = 5000
+threshold_5 = 300
+threshold_high = 800
 
 signatures = [
     "ifconfig",
@@ -23,10 +23,10 @@ signatures = [
 ]
 
 real_ip = [
-    "192.168.10.1",
-    "192.168.10.2",
-    "192.168.10.3",
-    "192.168.10.4"
+    "10.0.2.12",
+    "10.0.2.13",
+    "10.0.2.13",
+    "10.0.2.13"
 ]
 
 def sortIPaddress(copy):
@@ -56,22 +56,27 @@ def block_ip(block_ip):
     
 def ipAddress_Source_Frequncy_ddos(copy):
     try:
+        IP_count = 0
+        for IP_total in copy:
+            if "IP" in IP_total:
+                IP_count +=1
+        
         for fiveSec_check in ipAddressSRC_unique:
             five_frequncy = 0
-            TCP_count = 0
             for individual_ip in copy:
                 if "IP" in individual_ip:
                     if individual_ip.ip.src == fiveSec_check:
                         five_frequncy += 1
-                    if "IP" in individual_ip:
-                        TCP_count +=1
             if (five_frequncy > threshold_5) and (fiveSec_check not in ipAddress_blocked):
                 print(f'{individual_ip.ip.src} over threshold in the last 5 seconds')
                 block_ip(individual_ip.ip.src)
-            elif TCP_count > threshold_high:
-                print(f'Frequncy of packets too high within 5 seconds')
-                for massBlock in copy:
-                    block_ip(massBlock.ip.src)
+        
+        if (IP_count > threshold_high):
+            print(f'Frequncy of packets too high within 5 seconds')
+            for massBlock in copy:
+                if "IP" in massBlock:
+                    if fiveSec_check not in real_ip:
+                        block_ip(massBlock.ip.src)
                     
         for sourceIP in ipAddressSRC_unique:
             srcFrequncy = 0
