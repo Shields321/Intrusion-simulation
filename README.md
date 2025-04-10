@@ -45,6 +45,10 @@ Both VMs should be set to Host-Only networking mode to isolate traffic.
 | Reg-08    | Regression test on attack change     | Pass   |
 | Perf-09   | Monitor performance during attack    | Pass   |
 | Sec-10    | Attempt attack outside local network | Pass   |
+| TC-11	    | Perform DoS attack                   | Pass   |
+| TC-12	    | Perform spoofed IP attack	           | Pass   |
+| TC-13 	| Perform payload signature attack	   | Pass   |
+
 
 ## Notes
 
