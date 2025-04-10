@@ -23,8 +23,31 @@ Both VMs should be set to Host-Only networking mode to isolate traffic.
 - Python 3
 - VirtualBox
 - Tshark/wireshark
-- Python packages: `virtualbox` (pyvbox), `paramiko`, `pyshark`
+- Python packages: `virtualbox`, `paramiko`, `pyshark`
 - Kali and Ubuntu VMs installed in VirtualBox
 - Guest Additions installed in the VMs
 - the ubuntu VM should have the IDPS.py installed and ready to run
+
+
+3. Use the GUI to start VMs, run the attack, monitor detection, and stop VMs.
+
+## Test Cases Summary
+
+| Test ID   | Description                          | Result |
+|-----------|--------------------------------------|--------|
+| TC-01     | Start VMs via GUI                    | Pass   |
+| TC-02     | Execute attack via GUI               | Pass   |
+| TC-03     | Block IP on suspicious packet        | Pass   |
+| TC-04     | No VM selected warning               | Pass   |
+| TC-05     | SSH into VMs and run attack          | Fail   |
+| TC-06     | Stop attack                          | Fail   |
+| TC-07     | Stop VMs                             | Fail   |
+| Reg-08    | Regression test on attack change     | Pass   |
+| Perf-09   | Monitor performance during attack    | Pass   |
+| Sec-10    | Attempt attack outside local network | Pass   |
+
+## Notes
+
+This simulation is for testing and learning purposes only. It is not intended for real-world deployment or use outside a secure test environment.
+
 
