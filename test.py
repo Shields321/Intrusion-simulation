@@ -2,6 +2,7 @@ import time
 import subprocess
 import paramiko
 import virtualbox
+import threading
 
 class VMManager:
     def __init__(self):
@@ -57,18 +58,48 @@ class VMManager:
             print(f"[-] SSH connection failed: {e}")
             return None, str(e)
 
-    def start_vms_and_get_ips(self, vm_names):
-        """Start VMs, get their IPs, and return them."""
-        for vm_name in vm_names:
-            machine, session = self.start_vm(vm_name)
-            # Wait a few seconds to ensure the VM has booted
-            time.sleep(10)  # Adjust this if needed depending on VM boot time
+    def poll_for_ip(self, vm_name, retries=10, delay=5):
+        """Poll for the IP address of the VM until it is available."""
+        for _ in range(retries):
             ip = self.get_vm_ip(vm_name)
+            if ip != "IP not found" and ip != "Error":
+                return ip
+            time.sleep(delay)
+        return None
+
+    def start_vms_and_get_ips(self, vm_names):
+        """Start multiple VMs concurrently, get their IPs, and return them."""
+        threads = []
+        
+        # Start a thread for each VM to start and get its IP
+        for vm_name in vm_names:
+            thread = threading.Thread(target=self.start_vm_and_get_ip, args=(vm_name,))
+            threads.append(thread)
+            thread.start()
+
+        # Wait for all threads to complete
+        for thread in threads:
+            thread.join()
+
+        return self.vm_ips
+
+    def start_vm_and_get_ip(self, vm_name):
+        """Helper function to start a VM and retrieve its IP."""
+        machine, session = self.start_vm(vm_name)
+        
+        # Wait a few seconds to ensure the VM has booted
+        time.sleep(120)  # Adjust this if needed depending on VM boot time
+
+        ip = self.poll_for_ip(vm_name)
+        if ip:
             print(f"[*] IP for '{vm_name}': {ip}")
             self.vm_ips[vm_name] = ip
-            # Unlock the session after use to prevent the "busy" error
-            session.unlock_machine()
-        return self.vm_ips
+        else:
+            print(f"[-] Failed to get IP for '{vm_name}'")
+
+        # Unlock the session after use to prevent the "busy" error
+        session.unlock_machine()
+
     def stop_vm(self, vm_name):
         """Stop the VM."""
         print(f"[*] Stopping VM '{vm_name}'...")
@@ -86,52 +117,3 @@ class VMManager:
         
         except Exception as e:
             print(f"[-] Error stopping VM '{vm_name}': {e}")
-        
-
-
-# Usage example
-if __name__ == "__main__":
-    vm_manager = VMManager()
-    
-    # List all VM names
-    print("Available VMs:", vm_manager.list_vms())
-    
-    # Start VMs and get their IPs
-    vm_names = ["kali-linux-2024.3-virtualbox-amd64", "ubuntuDesktop"]
-    vm_ips = vm_manager.start_vms_and_get_ips(vm_names)
-    
-    print("[*] All VMs started and IPs collected.")
-    print(vm_ips)
-
-    # SSH into VMs and run a command
-    kali_ip = vm_ips.get("kali-linux-2024.3-virtualbox-amd64")
-    ubuntu_ip = vm_ips.get("ubuntuDesktop")
-    
-    print(f"Waiting for 20 seconds before running commands...")
-    time.sleep(20)  # Wait a bit before running commands
-
-    if kali_ip and ubuntu_ip:
-        confirm = input(f"Do you want to launch the hping3 attack from Kali ({kali_ip}) to Ubuntu ({ubuntu_ip})? (yes/no): ").strip().lower()
-        
-        if confirm == "yes":
-            # Modify command to send 1000 packets and then stop
-            attack_command = f"echo kali | sudo -S hping3 -S -c 100 -p 80 {ubuntu_ip}"
-            print(f"[*] Running hping3 flood from Kali to {ubuntu_ip}...")
-            output, error = vm_manager.ssh_execute_command(kali_ip, "kali", "kali", attack_command)
-            print(f"[*] Attack Output: {output}")
-            if error:
-                print(f"[!] Attack Error: {error}")
-        else:
-            print("[*] Attack aborted by user.")
-    else:
-        print("[!] Could not get IPs for both Kali and Ubuntu.")
-
-    # Uncomment code is becuase the functionality to run the ssh server on the ubuntu vm has not been found out yet
-    """
-    if ubuntu_ip:
-        print(f"[*] Running 'uptime' on Ubuntu VM...")
-        output, error = vm_manager.ssh_execute_command(ubuntu_ip, "shields", "1234", "uptime")
-        print(f"[*] Output: {output}")
-        if error:
-            print(f"[*] Error: {error}")
-    """

